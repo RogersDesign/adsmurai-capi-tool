@@ -16,9 +16,6 @@ const log = pino({
     : undefined
 });
 
-/**
- * ENV
- */
 const CSV_URL = process.env.CSV_URL;
 const META_PIXEL_ID = process.env.META_PIXEL_ID;
 const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN;
@@ -43,7 +40,7 @@ if (!META_ACCESS_TOKEN) {
 /**
  * Helpers
  */
-function driveViewToDirectDownload(url) {
+function viewToDownload(url) {
   const match = url.match(/\/file\/d\/([^/]+)\/view/);
   if (!match) return url;
   const fileId = match[1];
@@ -145,7 +142,7 @@ function uniqueNonNull(arr) {
   return [...new Set(arr.filter(Boolean))];
 }
 
-function deterministicEventId(row) {
+function generateEventId(row) {
   const emails = uniqueNonNull([
     normalizeEmail(row.email),
     normalizeEmail(row['email.1']),
@@ -187,18 +184,17 @@ function buildMetaEvent(row) {
   const eventTime = parseCheckoutTimeToUnix(row.Checkout_time);
   const { value, currency } = parsePriceAndCurrency(row.Price);
 
-  // madid no se hashea 
   const madid = row.madid ? String(row.madid).trim() : null;
 
   const user_data = {};
-  if (emHashed.length) user_data.em = emHashed; // array con los 3 emails del mismo user (sin duplicados)
+  if (emHashed.length) user_data.em = emHashed;
   if (phHashed.length) user_data.ph = phHashed;
   if (fnHashed) user_data.fn = fnHashed;
   if (lnHashed) user_data.ln = lnHashed;
   if (zpHashed) user_data.zp = zpHashed;
   if (countryHashed) user_data.country = countryHashed;
   if (genderHashed) user_data.ge = genderHashed;
-  if (madid) user_data.madid = madid; // sin hash
+  if (madid) user_data.madid = madid;
 
   const missing = [];
   if (!eventTime) missing.push('Checkout_time->event_time');
@@ -209,7 +205,7 @@ function buildMetaEvent(row) {
     event_name: 'Purchase',
     event_time: eventTime || Math.floor(Date.now() / 1000),
     action_source: 'physical_store',
-    event_id: deterministicEventId(row),
+    event_id: generateEventId(row),
     user_data,
     custom_data: {
       value: value ?? 0,
@@ -224,12 +220,9 @@ function buildMetaEvent(row) {
   return { event, missing };
 }
 
-/**
- * Descarga + decode CSV
- */
 async function downloadCsv(url) {
-  const directUrl = driveViewToDirectDownload(url);
-  log.info({ url, directUrl }, 'Descargando CSV...');
+  const directUrl = viewToDownload(url);
+  log.info({ url, directUrl }, 'Downloading CSV...');
 
   const res = await axios.get(directUrl, {
     responseType: 'arraybuffer',
@@ -260,9 +253,7 @@ function makeUniqueHeaders(headers) {
   function parseCsv(text) {
     const firstLine = text.split(/\r?\n/)[0] || '';
     const delimiter = detectDelimiter(firstLine);
-  
-    log.info({ delimiter }, 'Delimitador detectado');
-  
+    
     const records = parse(text, {
       delimiter,
       columns: (header) => makeUniqueHeaders(header),
@@ -278,15 +269,12 @@ function makeUniqueHeaders(headers) {
     return records;
   }  
 
-/**
- * Enviar batch a Meta CAPI
- */
-async function sendBatchToMeta(events) {
+async function postEvents(events) {
   const url = `https://graph.facebook.com/${META_API_VERSION}/${META_PIXEL_ID}/events`;
 
   if (DRY_RUN) {
-    log.warn('DRY_RUN=1 -> No se va a enviar nada a Meta.');
-    log.info({ sample: events[0] }, 'Evento ejemplo');
+    log.warn('Dry run: no events sent');
+    log.info({ sample: events[0] }, 'Sample event');
     return { dry_run: true, events_sent: events.length };
   }
 
@@ -310,13 +298,13 @@ async function sendBatchToMeta(events) {
 async function main() {
   log.info(
     { BATCH_SIZE, DRY_RUN, META_PIXEL_ID, hasTestCode: Boolean(TEST_EVENT_CODE) },
-    'Iniciando tool...'
+    'Starting...'
   );
 
   const csvText = await downloadCsv(CSV_URL);
   const rows = parseCsv(csvText);
 
-  log.info({ rows: rows.length }, 'CSV parseado');
+  log.info({ rows: rows.length }, 'CSV loaded');
 
   const metaEvents = [];
   let warnings = 0;
@@ -327,21 +315,21 @@ async function main() {
 
     if (missing.length) {
       warnings++;
-      log.warn({ rowIndex: i + 1, missing }, 'Fila con campos incompletos');
+      log.warn({ rowIndex: i + 1, missing }, 'Missing fields');
     }
 
     metaEvents.push(event);
   }
 
-  log.info({ warnings, total: metaEvents.length }, 'Eventos construidos');
+  log.info({ warnings, total: metaEvents.length }, 'Eventos prepared');
 
   // Enviar en batches
   let sent = 0;
   for (let i = 0; i < metaEvents.length; i += BATCH_SIZE) {
     const batch = metaEvents.slice(i, i + BATCH_SIZE);
-    log.info({ batchFrom: i + 1, batchTo: i + batch.length }, 'Enviando batch...');
+    log.info({ batchFrom: i + 1, batchTo: i + batch.length }, 'Sending batch');
 
-    const result = await sendBatchToMeta(batch);
+    const result = await postEvents(batch);
 
     if (result.dry_run) {
       sent += batch.length;
@@ -349,19 +337,19 @@ async function main() {
     }
 
     if (result.status === 200) {
-      log.info({ metaResponse: result.data }, 'Respuesta 200 de Meta');
+      log.info({ metaResponse: result.data }, 'Meta API responded with 200');
       sent += batch.length;
     } else {
-      log.error({ status: result.status, metaResponse: result.data }, 'Error enviando a Meta');
+      log.error({ status: result.status, metaResponse: result.data }, 'Meta API request failed');
       process.exitCode = 1;
       return;
     }
   }
 
-  log.info({ sent }, 'Proceso finalizado');
+  log.info({ sent }, 'All batches processed');
 }
 
 main().catch(err => {
-  log.error({ err: err?.message, stack: err?.stack }, 'Fallo inesperado');
+  log.error({ err: err?.message, stack: err?.stack }, 'Unexpected error');
   process.exit(1);
 });
