@@ -1,5 +1,5 @@
-# Technical test - Solutions Engineer at Adsmurai
-## by Solutions Engineering
+# Technical test - Solutions Engineer at Adsmurai by Solutions Engineering
+## Meta Conversions API – Offline Events Uploader
 
 This project is a Node.js CLI tool developed as part of the Adsmurai technical assessment.  
 It downloads a CSV file containing offline POS purchases, normalizes and hashes user data according to Meta Conversions API requirements, and sends `Purchase` events to Meta using the Conversions API.
@@ -72,6 +72,7 @@ Expected output:
 - Events built successfully
 - Sample event logged
 - No HTTP requests sent to Meta
+
 
 
 
