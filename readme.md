@@ -34,24 +34,43 @@ It downloads a CSV file containing offline POS purchases, normalizes and hashes 
 ---
 
 ## Installation
+### Send Events to Meta
 
 ```bash
 npm install
 ```
 ## Usage
-Runs the full pipeline (download, parse, normalize, hash) but does not send any data to Meta.
+```bash
+npm start
+```
+
+Expected successful response:
+
+- CSV downloaded and parsed
+- Events built successfully
+- HTTP 200 from Meta
+- `events_received` equals the number of processed rows
+
+---
+
+### Dry Run (Safe Testing Mode)
 
 ```bash
 npm run dry
 ```
+Runs the full pipeline (download, parse, normalize, hash) but does **not** send any data to Meta.
+
+To enable Dry Run mode, open the `.env` file and set:
+
+```ini
+DRY_RUN=1
+```
+
 Expected output:
 - CSV downloaded and parsed
 - Events built successfully
 - Sample event logged
 - No HTTP requests sent to Meta
 
-## Send Events to Meta
 
-```bash
-npm start
-```
+
