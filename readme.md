@@ -37,13 +37,13 @@ It downloads a CSV file containing offline POS purchases, normalizes and hashes 
 
 ```bash
 npm install
-
+```
 ## Usage
 Runs the full pipeline (download, parse, normalize, hash) but does not send any data to Meta.
 
 ```bash
 npm run dry
-
+```
 Expected output:
 - CSV downloaded and parsed
 - Events built successfully
@@ -54,3 +54,4 @@ Expected output:
 
 ```bash
 npm start
+```
