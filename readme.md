@@ -34,12 +34,13 @@ It downloads a CSV file containing offline POS purchases, normalizes and hashes 
 ---
 
 ## Installation
-### Send Events to Meta
 
 ```bash
 npm install
 ```
 ## Usage
+### Send Events to Meta
+
 ```bash
 npm start
 ```
