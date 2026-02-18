@@ -1,0 +1,33 @@
+{
+  "name": "adsmurai-capi-tool",
+  "version": "1.0.0",
+  "description": "Offline conversions uploader to Meta Conversions API (Adsmurai technical test)",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js",
+    "dry": "cross-env DRY_RUN=1 node index.js",
+    "start:pretty": "cross-env PINO_PRETTY=1 node index.js"
+  },
+  "keywords": [
+    "meta",
+    "conversions-api",
+    "offline-conversions",
+    "adsmurai",
+    "nodejs"
+  ],
+  "author": "Roger Mestre Rosich",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.13.5",
+    "csv-parse": "^6.1.0",
+    "date-fns": "^4.1.0",
+    "dotenv": "^17.3.1",
+    "iconv-lite": "^0.7.2",
+    "pino": "^10.3.1"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "pino-pretty": "^13.1.3"
+  }
+}
