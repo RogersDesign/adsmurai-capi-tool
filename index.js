@@ -321,7 +321,7 @@ async function main() {
     metaEvents.push(event);
   }
 
-  log.info({ warnings, total: metaEvents.length }, 'Eventos prepared');
+  log.info({ warnings, total: metaEvents.length }, 'Events prepared');
 
   // Enviar en batches
   let sent = 0;
@@ -352,4 +352,5 @@ async function main() {
 main().catch(err => {
   log.error({ err: err?.message, stack: err?.stack }, 'Unexpected error');
   process.exit(1);
+
 });
